@@ -1,0 +1,11 @@
+txid,input_txid:output_index,output1_id,output2_id
+tx1,genesis:0,out1,out2
+tx2,tx1:0,out3,out4
+tx3,tx1:1,out5,out6
+tx4,tx2:0,out7,out8
+tx5,tx2:1,out9,out10
+tx6,tx4:0,out11,out12
+tx7,tx6:1,out13,out14
+tx8,tx5:0,out15,out16
+tx9,tx3:0,out17,out18
+tx10,tx9:1,out19,out20
