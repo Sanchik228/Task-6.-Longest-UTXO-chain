@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 
 struct Transaction {
     std::string txID;
@@ -54,9 +55,80 @@ std::vector<Transaction> readFromCSV(const std::string& f) {
     return transactios;
 }
 
+int dfs(int node,
+    const std::vector<std::vector<int>>& children,
+    std::vector<int>& memo,
+    std::vector<int>& next) {
+    if (memo[node] != -1) return memo[node];
+
+    int max_depth = 1;
+    int best_child = -1;
+
+    for (int child : children[node]) {
+        int d = dfs(child, children, memo, next);
+        if (1 + d > max_depth) {
+            max_depth = 1 + d;
+            best_child = child;
+        }
+    }
+
+    next[node] = best_child;
+    return memo[node] = max_depth;
+}
+
 int main() {
-    std::string filename = "transactions.csv";
-    std::vector<Transaction> txs = readFromCSV(filename);
-    std::cout << "Readed transactions: " << txs.size() << std::endl;
+    auto txs = readFromCSV("transactions.csv");
+    int n = txs.size();
+    std::cout << "Loaded " << n << " transactions\n";
+
+    std::unordered_map<std::string, int> utxo_ID;
+    utxo_ID.reserve(n * 2);
+    for (int i = 0; i < n; i++) {
+        utxo_ID[txs[i].txID + ":0"] = i;
+        utxo_ID[txs[i].txID + ":1"] = i;
+    }
+
+    std::vector<std::vector<int>> children(n);
+    for (int j = 0; j < n; j++) {
+        std::string in_id = txs[j].getInputID();
+        auto it = utxo_ID.find(in_id);
+        if (it != utxo_ID.end()) {
+            children[it->second].push_back(j);
+        }
+    }
+
+    for (int i = 0; i < n; i++) {
+        std::cout << txs[i].txID << " -> ";
+        for (int c : children[i])
+            std::cout << txs[c].txID << " ";
+        std::cout << "\n";
+    }
+
+    std::vector<int> memo(n, -1);
+    std::vector<int> next(n, -1);
+
+    int longest = 0;
+    int start_index = -1;
+
+    for (int i = 0; i < n; ++i) {
+        int depth = dfs(i, children, memo, next);
+        if (depth > longest) {
+            longest = depth;
+            start_index = i;
+        }
+    }
+
+    std::cout << "\nLongest UTXO chain starts from " << txs[start_index].txID
+        << " and has length " << longest << "\n";
+
+    std::cout << "Chain: ";
+    int current = start_index;
+    while (current != -1) {
+        std::cout << txs[current].txID;
+        current = next[current];
+        if (current != -1) std::cout << " -> ";
+    }
+    std::cout << std::endl;
+
     return 0;
 }
